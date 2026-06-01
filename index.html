@@ -240,12 +240,21 @@
           <span class="card-header-icon">📏</span>
           <h2>三圍</h2>
         </div>
-        <div class="row3">
+        <!-- 胸圍上下 -->
+        <div style="font-size:12px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--text2);margin-bottom:8px;">胸圍</div>
+        <div class="row2" style="margin-bottom:10px;">
           <div class="field">
-            <label>胸圍</label>
-            <input type="number" id="chest" placeholder="88" min="0" />
+            <span class="lr-label" style="background:#f0e8fb;color:#6622a4;">上</span>
+            <input type="number" id="chest_top" placeholder="88" min="0" />
             <span class="unit-hint">cm</span>
           </div>
+          <div class="field">
+            <span class="lr-label" style="background:#e8f5fb;color:#226ea4;">下</span>
+            <input type="number" id="chest_bot" placeholder="78" min="0" />
+            <span class="unit-hint">cm</span>
+          </div>
+        </div>
+        <div class="row2">
           <div class="field">
             <label>腰圍</label>
             <input type="number" id="waist" placeholder="68" min="0" />
@@ -379,7 +388,8 @@ function saveRecord() {
     date: new Date().toLocaleDateString('zh-TW'),
     name,
     gender: val('gender'),
-    chest: val('chest'),
+    chest_top: val('chest_top'),
+    chest_bot: val('chest_bot'),
     waist: val('waist'),
     hip: val('hip'),
     arm_l: val('arm_l'),
@@ -402,7 +412,7 @@ function saveRecord() {
 }
 
 function clearForm() {
-  ['name','chest','waist','hip','arm_l','arm_r','thigh_l','thigh_r','calf_l','calf_r','note'].forEach(id => {
+  ['name','chest_top','chest_bot','waist','hip','arm_l','arm_r','thigh_l','thigh_r','calf_l','calf_r','note'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -444,7 +454,8 @@ function renderList() {
         <button class="del-btn" onclick="deleteRecord(${r.id})" title="刪除">🗑</button>
       </div>
       <div class="measures-grid">
-        ${pill('胸圍', r.chest, '')}
+        ${pill('胸圍上', r.chest_top || r.chest, '')}
+        ${pill('胸圍下', r.chest_bot, '')}
         ${pill('腰圍', r.waist, '')}
         ${pill('臀圍', r.hip, '')}
         ${pill('手臂', r.arm_l, 'L')}
