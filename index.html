@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>客人身體測量機器人</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f5f2ee;
+    --surface: #ffffff;
+    --surface2: #f0ece6;
+    --border: #ddd8d0;
+    --text: #1a1714;
+    --text2: #6b6560;
+    --text3: #a09890;
+    --accent: #2d5a3d;
+    --accent-light: #e8f2eb;
+    --accent-text: #1a3d28;
+    --danger: #c0392b;
+    --danger-light: #fdf0ef;
+    --mono: 'DM Mono', monospace;
+    --sans: 'Noto Sans TC', sans-serif;
+  }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* ── Top bar ── */
+  .topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 1.5rem;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .topbar-icon {
+    width: 34px; height: 34px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 18px;
+  }
+  .topbar-title { font-size: 16px; font-weight: 700; letter-spacing: 0.02em; }
+  .topbar-sub { font-size: 12px; color: var(--text3); margin-left: auto; font-family: var(--mono); }
+
+  /* ── Layout ── */
+  .layout {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 4rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    align-items: start;
+  }
+  @media (max-width: 680px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+
+  /* ── Card ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .card-header {
+    padding: 14px 18px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-header-icon { font-size: 16px; }
+  .card-header h2 { font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text2); }
+  .card-body { padding: 18px; }
+
+  /* ── Form fields ── */
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label { font-size: 12px; font-weight: 500; color: var(--text2); letter-spacing: 0.03em; }
+  .field input, .field select, .field textarea {
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--text);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 8px 10px;
+    transition: border-color 0.15s, background 0.15s;
+    width: 100%;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: #fff;
+  }
+  .field input::placeholder { color: var(--text3); }
+  .field select { appearance: none; cursor: pointer; }
+  .field textarea { resize: vertical; min-height: 60px; }
+  .unit-hint { font-size: 11px; color: var(--text3); font-family: var(--mono); }
+
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .gap { display: flex; flex-direction: column; gap: 12px; }
+
+  /* left/right label */
+  .lr-label {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.05em;
+    text-transform: uppercase; padding: 2px 7px;
+    border-radius: 4px; display: inline-block; margin-bottom: 4px;
+  }
+  .lr-L { background: #e8f0fb; color: #2255a4; }
+  .lr-R { background: #fef0e8; color: #a44522; }
+
+  /* ── Buttons ── */
+  .btn { font-family: var(--sans); font-size: 14px; font-weight: 500; border-radius: 8px; padding: 10px 16px; cursor: pointer; border: none; transition: all 0.15s; }
+  .btn-primary { background: var(--accent); color: #fff; width: 100%; }
+  .btn-primary:hover { background: #245030; }
+  .btn-ghost { background: transparent; color: var(--text2); border: 1px solid var(--border); }
+  .btn-ghost:hover { background: var(--surface2); }
+  .btn-row { display: flex; gap: 8px; margin-top: 6px; }
+
+  .toast {
+    display: none; background: var(--accent-light); color: var(--accent-text);
+    border: 1px solid #b8d9c2; border-radius: 7px; padding: 8px 12px;
+    font-size: 13px; margin-top: 8px; font-weight: 500;
+  }
+  .toast.show { display: block; }
+
+  /* ── Records panel ── */
+  .full-col { grid-column: 1 / -1; }
+
+  .search-bar {
+    display: flex; gap: 8px; margin-bottom: 1rem; align-items: center;
+  }
+  .search-bar input {
+    flex: 1; font-family: var(--sans); font-size: 14px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 9px 12px; color: var(--text);
+  }
+  .search-bar input:focus { outline: none; border-color: var(--accent); }
+  .count-badge {
+    font-size: 12px; font-family: var(--mono);
+    color: var(--text3); white-space: nowrap;
+  }
+
+  .rec-list { display: flex; flex-direction: column; gap: 10px; }
+
+  .rec {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .rec-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .rec-name { font-size: 15px; font-weight: 700; }
+  .rec-meta { font-size: 12px; color: var(--text3); font-family: var(--mono); margin-top: 2px; }
+  .del-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--text3); font-size: 16px; padding: 2px 6px;
+    border-radius: 5px; transition: all 0.15s;
+  }
+  .del-btn:hover { background: var(--danger-light); color: var(--danger); }
+
+  .measures-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 6px;
+  }
+  .m-pill {
+    background: var(--surface2);
+    border-radius: 7px;
+    padding: 6px 9px;
+    font-size: 11px;
+    color: var(--text2);
+  }
+  .m-pill strong { display: block; font-size: 14px; color: var(--text); font-family: var(--mono); font-weight: 500; }
+
+  .rec-note {
+    margin-top: 10px; padding-top: 8px;
+    border-top: 1px solid var(--border);
+    font-size: 12px; color: var(--text2);
+  }
+
+  .empty {
+    text-align: center; padding: 3rem 1rem;
+    color: var(--text3); font-size: 14px;
+  }
+  .empty-icon { font-size: 40px; display: block; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-icon">📐</div>
+  <div class="topbar-title">量身登記系統</div>
+  <div class="topbar-sub">客人身體測量機器人</div>
+</div>
+
+<div class="layout">
+
+  <!-- 基本資料 -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-header-icon">👤</span>
+      <h2>基本資料</h2>
+    </div>
+    <div class="card-body gap">
+      <div class="row2">
+        <div class="field">
+          <label>姓名</label>
+          <input type="text" id="name" placeholder="王小明" />
+        </div>
+        <div class="field">
+          <label>性別</label>
+          <select id="gender">
+            <option value="">請選擇</option>
+            <option>女</option>
+            <option>男</option>
+            <option>不公開</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 三圍 -->
+      <div>
+        <div class="card-header" style="border:none;padding:0 0 8px;border-bottom:1px solid var(--border);margin-bottom:12px;">
+          <span class="card-header-icon">📏</span>
+          <h2>三圍</h2>
+        </div>
+        <div class="row3">
+          <div class="field">
+            <label>胸圍</label>
+            <input type="number" id="chest" placeholder="88" min="0" />
+            <span class="unit-hint">cm</span>
+          </div>
+          <div class="field">
+            <label>腰圍</label>
+            <input type="number" id="waist" placeholder="68" min="0" />
+            <span class="unit-hint">cm</span>
+          </div>
+          <div class="field">
+            <label>臀圍</label>
+            <input type="number" id="hip" placeholder="94" min="0" />
+            <span class="unit-hint">cm</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 備註 -->
+      <div class="field">
+        <label>備註</label>
+        <textarea id="note" placeholder="版型偏好、特殊備注..."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- 手臂 & 腿部 -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-header-icon">💪</span>
+      <h2>手臂 & 腿部（左右分開）</h2>
+    </div>
+    <div class="card-body gap">
+
+      <!-- 手臂 -->
+      <div>
+        <div style="font-size:12px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--text2);margin-bottom:8px;">手臂圍</div>
+        <div class="row2">
+          <div class="field">
+            <span class="lr-label lr-L">左</span>
+            <input type="number" id="arm_l" placeholder="28" min="0" />
+            <span class="unit-hint">cm</span>
+          </div>
+          <div class="field">
+            <span class="lr-label lr-R">右</span>
+            <input type="number" id="arm_r" placeholder="28" min="0" />
+            <span class="unit-hint">cm</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 大腿 -->
+      <div>
+        <div style="font-size:12px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--text2);margin-bottom:8px;">大腿圍</div>
+        <div class="row2">
+          <div class="field">
+            <span class="lr-label lr-L">左</span>
+            <input type="number" id="thigh_l" placeholder="55" min="0" />
+            <span class="unit-hint">cm</span>
+          </div>
+          <div class="field">
+            <span class="lr-label lr-R">右</span>
+            <input type="number" id="thigh_r" placeholder="55" min="0" />
+            <span class="unit-hint">cm</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 小腿 -->
+      <div>
+        <div style="font-size:12px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--text2);margin-bottom:8px;">小腿圍</div>
+        <div class="row2">
+          <div class="field">
+            <span class="lr-label lr-L">左</span>
+            <input type="number" id="calf_l" placeholder="35" min="0" />
+            <span class="unit-hint">cm</span>
+          </div>
+          <div class="field">
+            <span class="lr-label lr-R">右</span>
+            <input type="number" id="calf_r" placeholder="35" min="0" />
+            <span class="unit-hint">cm</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div style="margin-top:4px;">
+        <button class="btn btn-primary" onclick="saveRecord()">💾 儲存客人資料</button>
+        <div class="btn-row">
+          <button class="btn btn-ghost" style="flex:1;" onclick="clearForm()">✕ 清除表單</button>
+        </div>
+        <div id="toast" class="toast">✅ 已成功儲存！</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Records -->
+  <div class="card full-col">
+    <div class="card-header">
+      <span class="card-header-icon">📋</span>
+      <h2>客人列表</h2>
+    </div>
+    <div class="card-body">
+      <div class="search-bar">
+        <input type="text" id="search" placeholder="搜尋客人姓名..." oninput="renderList()" />
+        <span class="count-badge" id="count-badge">0 人</span>
+      </div>
+      <div class="rec-list" id="rec-list"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const STORAGE_KEY = 'measurements_v2';
+let records = [];
+
+try { records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch(e) { records = []; }
+
+function save() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(records)); } catch(e) {}
+}
+
+function val(id) {
+  const el = document.getElementById(id);
+  return el ? el.value.trim() : '';
+}
+
+function saveRecord() {
+  const name = val('name');
+  if (!name) { document.getElementById('name').focus(); return; }
+
+  const rec = {
+    id: Date.now(),
+    date: new Date().toLocaleDateString('zh-TW'),
+    name,
+    gender: val('gender'),
+    chest: val('chest'),
+    waist: val('waist'),
+    hip: val('hip'),
+    arm_l: val('arm_l'),
+    arm_r: val('arm_r'),
+    thigh_l: val('thigh_l'),
+    thigh_r: val('thigh_r'),
+    calf_l: val('calf_l'),
+    calf_r: val('calf_r'),
+    note: val('note'),
+  };
+
+  records.unshift(rec);
+  save();
+  clearForm();
+  renderList();
+
+  const t = document.getElementById('toast');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function clearForm() {
+  ['name','chest','waist','hip','arm_l','arm_r','thigh_l','thigh_r','calf_l','calf_r','note'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('gender').value = '';
+}
+
+function deleteRecord(id) {
+  if (!confirm('確定要刪除這筆記錄嗎？')) return;
+  records = records.filter(r => r.id !== id);
+  save();
+  renderList();
+}
+
+function pill(label, value, side) {
+  if (!value) return '';
+  const sideColor = side === 'L' ? '#2255a4' : side === 'R' ? '#a44522' : 'inherit';
+  const sideTag = side ? `<span style="font-size:10px;font-weight:700;color:${sideColor};font-family:var(--mono);">${side}</span> ` : '';
+  return `<div class="m-pill">${sideTag}${label}<strong>${value} cm</strong></div>`;
+}
+
+function renderList() {
+  const q = val('search').toLowerCase();
+  const filtered = records.filter(r => r.name.toLowerCase().includes(q));
+  const container = document.getElementById('rec-list');
+  document.getElementById('count-badge').textContent = `${filtered.length} 人`;
+
+  if (!filtered.length) {
+    container.innerHTML = `<div class="empty"><span class="empty-icon">📭</span>${records.length ? '找不到符合的客人' : '尚未登記任何客人'}</div>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map(r => `
+    <div class="rec">
+      <div class="rec-top">
+        <div>
+          <div class="rec-name">${r.name}${r.gender ? ` <span style="font-size:12px;font-weight:400;color:var(--text3);">· ${r.gender}</span>` : ''}</div>
+          <div class="rec-meta">${r.date}</div>
+        </div>
+        <button class="del-btn" onclick="deleteRecord(${r.id})" title="刪除">🗑</button>
+      </div>
+      <div class="measures-grid">
+        ${pill('胸圍', r.chest, '')}
+        ${pill('腰圍', r.waist, '')}
+        ${pill('臀圍', r.hip, '')}
+        ${pill('手臂', r.arm_l, 'L')}
+        ${pill('手臂', r.arm_r, 'R')}
+        ${pill('大腿', r.thigh_l, 'L')}
+        ${pill('大腿', r.thigh_r, 'R')}
+        ${pill('小腿', r.calf_l, 'L')}
+        ${pill('小腿', r.calf_r, 'R')}
+      </div>
+      ${r.note ? `<div class="rec-note">📝 ${r.note}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+renderList();
+</script>
+</body>
+</html>
